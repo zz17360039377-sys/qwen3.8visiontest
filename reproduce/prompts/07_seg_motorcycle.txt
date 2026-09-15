@@ -1,0 +1,1 @@
+Segment the motorcycle in this image. Respond ONLY with JSON: {"label": "motorcycle", "polygon": [[x1,y1],[x2,y2],...]} using integer pixel coordinates tracing the outline of the motorcycle.

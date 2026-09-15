@@ -1,0 +1,10 @@
+{
+  "dataset": "detect_light_luminous",
+  "type": "detect",
+  "n": 20,
+  "wall_s": 32.024468421936035,
+  "img_per_min": 37.47134797647499,
+  "workers": 3,
+  "gpu_mem_max_mb": 20542,
+  "prompt": "You are a precise YOLO annotation engine. Silently locate EVERY object instance in the image.\nClasses (id=name): 0=LUMINOUS.\nThen output ONLY YOLO lines, one per object: class_id cx cy w h\n- class_id is the integer id listed above\n- cx cy w h are floats in [0,1] normalized by image width/height, 4+ decimals\n- one TIGHT box per object, objects are typically 2-40% of image width; never output a whole-image box\nExample output:\n0 0.6465 0.7551 0.1868 0.1592\n2 0.1877 0.7654 0.1008 0.1628\nIf there are no objects output exactly: NONE"
+}

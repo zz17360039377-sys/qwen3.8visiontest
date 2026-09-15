@@ -1,0 +1,10 @@
+{
+  "dataset": "cls_armor_digit_slices",
+  "type": "cls",
+  "n": 28,
+  "wall_s": 9.435651779174805,
+  "img_per_min": 178.04811361393038,
+  "workers": 3,
+  "gpu_mem_max_mb": 20904,
+  "prompt": "Classify this image into exactly one of these classes:\n0=0, 1=1, 2=2, 3=3, 4=4, 5=6, 6=7\nAnswer with ONLY the class name (or its id), nothing else."
+}

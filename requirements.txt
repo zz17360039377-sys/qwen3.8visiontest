@@ -1,0 +1,7 @@
+requests>=2.31
+PyYAML>=5.4
+opencv-python>=4.8
+Pillow>=10.0
+numpy>=1.24
+# eval_pose.py --ref-model additionally needs:
+# ultralytics>=8.0

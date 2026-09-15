@@ -1,0 +1,35 @@
+__pycache__/
+*.pyc
+
+# CLI / tool outputs
+out_*/
+recheck_*/
+recheck_web_*/
+eval_pose_*/
+bench_*/
+datasets/
+
+# uploaded images inside static (keep index.html / app.js / style.css)
+static/*.jpg
+static/*.jpeg
+static/*.png
+static/*.bmp
+static/*.webp
+
+*.log
+
+# testenv: datasets are data copies, results are test outputs
+testenv/datasets/
+testenv/results/
+
+# Office lock / temp files
+.~*
+~$*
+
+# editor
+*.swp
+.idea/
+.vscode/
+
+# agent session files
+.zcode/

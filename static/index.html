@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>selflabel — 本地 VLM 自动标注</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>selflabel</h1>
+  <nav>
+    <button id="tab-annotate" class="tab active">标注</button>
+    <button id="tab-review" class="tab">数据审查 / 矫正</button>
+  </nav>
+  <span id="health" class="health">…</span>
+</header>
+
+<!-- ============ 标注页 ============ -->
+<main id="page-annotate" class="page">
+  <aside id="ann-left">
+    <div class="row">
+      <input type="file" id="file-input" multiple accept="image/*" hidden>
+      <button id="btn-upload">📂 上传图片</button>
+    </div>
+    <div id="ann-list"></div>
+  </aside>
+
+  <section id="ann-center">
+    <div id="canvas-wrap">
+      <canvas id="cv"></canvas>
+      <div id="cv-empty" class="empty">上传或拖入图片开始<br>（支持 jpg / png）</div>
+    </div>
+    <div id="cv-toolbar">
+      <label>模式
+        <select id="mode">
+          <option value="detect">detect 检测框</option>
+          <option value="pose">pose 关键点</option>
+        </select>
+      </label>
+      <label>选中项类别 <select id="sel-class"></select></label>
+      <button id="btn-draw" class="toggle">➕ 拉新框</button>
+      <button id="btn-del">🗑 删除选中</button>
+      <span class="hint">拖角点/框体调整 · v 切换点可见性 · 数字键换类别</span>
+      <span id="cv-info"></span>
+    </div>
+  </section>
+
+  <aside id="ann-right">
+    <h3>类别（每行 名称=描述）</h3>
+    <textarea id="classes" rows="5" placeholder="red_armor=a bright red armor module&#10;blue_armor=a blue armor module"></textarea>
+    <div id="kpt-block">
+      <h3>关键点（每行 名称=描述）</h3>
+      <textarea id="keypoints" rows="4" placeholder="top_left=the top-left corner&#10;top_right=...&#10;bottom_right=...&#10;bottom_left=..."></textarea>
+      <h3>skeleton（索引对 JSON）</h3>
+      <textarea id="skeleton" rows="2">[[0,1],[1,2],[2,3],[3,0]]</textarea>
+    </div>
+    <h3>附加提示（可选）</h3>
+    <textarea id="prompt" rows="2"></textarea>
+    <div class="row">
+      <label>conf <input id="conf" type="number" step="0.05" min="0" max="1" value="0"></label>
+      <label>iou <input id="iou" type="number" step="0.05" min="0" max="1" value="0.5"></label>
+    </div>
+    <button id="btn-annotate" class="primary">▶ 自动标注本图</button>
+    <h3>导出</h3>
+    <div class="row">
+      <select id="zip-fmt">
+        <option value="yolo">YOLO</option>
+        <option value="coco">COCO</option>
+      </select>
+      <button id="btn-export-zip">⬇ 全部导出 zip</button>
+    </div>
+    <div class="row">
+      <button id="btn-export-txt">⬇ 本图 txt</button>
+      <button id="btn-export-classes">⬇ classes.txt</button>
+    </div>
+  </aside>
+</main>
+
+<!-- ============ 审查页 ============ -->
+<main id="page-review" class="page hidden">
+  <aside id="rev-left">
+    <div class="row">
+      <select id="ds"><option>加载中…</option></select>
+      <button id="btn-ds-refresh" title="刷新">↻</button>
+    </div>
+    <div id="rev-classes"></div>
+    <div id="rev-job-panel">
+      <h3>后台 VLM 复核</h3>
+      <label>类别
+        <select id="job-cls"><option value="">全部</option></select>
+      </label>
+      <label>每类抽样 <input id="job-sample" type="number" value="0" title="0 = 全部"></label>
+      <label>放大 ×<input id="job-upscale" type="number" value="6" min="1" max="12"></label>
+      <textarea id="job-extra" rows="4" title="领域提示（会写进 prompt）"></textarea>
+      <button id="btn-job" class="primary">▶ 提交后台复核</button>
+      <div id="job-progress" class="hidden">
+        <div class="bar"><div id="job-bar"></div></div>
+        <div id="job-text"></div>
+        <button id="btn-job-cancel">✕ 取消</button>
+      </div>
+    </div>
+  </aside>
+
+  <section id="rev-main">
+    <div id="rev-toolbar">
+      <span id="rev-count"></span>
+      <label class="chk"><input type="checkbox" id="only-diff"> 只看 VLM 分歧</label>
+      <label>亮度 <input id="brightness" type="range" min="1" max="4" step="0.1" value="2.2"></label>
+      <span class="spacer"></span>
+      <label>移动到 <select id="move-to"></select></label>
+      <button id="btn-move">移动</button>
+      <button id="btn-adopt" title="把选中样本移动到 VLM 建议的类别">✓ 采纳 VLM 建议</button>
+      <button id="btn-del-rev">🗑 删除选中</button>
+      <button id="btn-newclass">＋ 新类别</button>
+    </div>
+    <div id="grid"></div>
+    <div id="grid-more" class="hidden"><button id="btn-more">加载更多…</button></div>
+  </section>
+</main>
+
+<div id="toast" class="hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "dataset": "labelme_radar_car",
+  "type": "labelme",
+  "n": 12,
+  "wall_s": 73.77639412879944,
+  "img_per_min": 9.759219171690853,
+  "workers": 3,
+  "gpu_mem_max_mb": 20536,
+  "prompt": "You are a precise annotation engine for a stationary radar/overhead camera view. Silently locate EVERY object in the image.\nClasses (name): 0=Car, 1=robotcar.\nThen output ONLY lines, one per object: class_name cx cy w h\n- class_name is the exact class name string (e.g. robotcar)\n- cx cy w h are floats in [0,1] normalized by image width/height, 4+ decimals\n- one TIGHT box per object; objects may be small\nExample output:\nrobotcar 0.5123 0.4311 0.0540 0.0380\nIf there are no objects output exactly: NONE"
+}

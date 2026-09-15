@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>图片打码工具</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #2a2f3a;
+    --text: #e6e9ef; --muted: #8b93a7; --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .3px; white-space: nowrap; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .toolbar .sep { width: 1px; height: 22px; background: var(--border); margin: 0 2px; }
+  button {
+    background: #222836; color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover:not(:disabled) { background: #2b3345; }
+  button.primary { background: var(--accent); border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #2f6fd8; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  #imgName { color: var(--muted); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  #stage {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+    padding: 16px; overflow: auto;
+  }
+  #canvas {
+    display: none; box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+    touch-action: none; cursor: crosshair; user-select: none;
+  }
+  #placeholder {
+    border: 2px dashed #394152; border-radius: 14px; padding: 48px 56px;
+    text-align: center; color: var(--muted); font-size: 14px; line-height: 2;
+    cursor: pointer; max-width: 520px;
+  }
+  #placeholder strong { color: var(--text); font-size: 16px; }
+  #placeholder:hover { border-color: var(--accent); }
+
+  aside {
+    width: 250px; flex-shrink: 0; background: var(--panel); border-left: 1px solid var(--border);
+    padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  }
+  aside h2 { font-size: 13px; margin: 0; font-weight: 600; color: var(--muted); }
+  #rectList {
+    list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px;
+    overflow-y: auto;
+  }
+  #rectList li {
+    display: flex; align-items: center; gap: 8px;
+    background: #1d222d; border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 9px; font-size: 12px; cursor: pointer;
+  }
+  #rectList li:hover { background: #232a37; }
+  #rectList li.sel { border-color: var(--accent); }
+  #rectList li .idx { color: var(--muted); flex-shrink: 0; }
+  #rectList li .meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #rectList li .del {
+    margin-left: auto; flex-shrink: 0; background: none; border: none; color: #e57373;
+    padding: 0 5px; font-size: 15px; line-height: 1; border-radius: 4px;
+  }
+  #rectList li .del:hover:not(:disabled) { background: rgba(229, 115, 115, .15); }
+  #rectList .empty { color: var(--muted); font-size: 12px; padding: 8px 4px; }
+  .tips { margin-top: auto; color: var(--muted); font-size: 11px; line-height: 1.9; border-top: 1px solid var(--border); padding-top: 10px; }
+  .tips b { color: #aab3c5; font-weight: 600; }
+
+  @media (max-width: 760px) {
+    main { flex-direction: column; }
+    aside { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 38vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🖤 图片打码工具</h1>
+  <div class="toolbar">
+    <button id="loadBtn">📂 选择图片</button>
+    <span id="imgName"></span>
+    <span class="sep"></span>
+    <button id="undoBtn" disabled>↩ 撤销</button>
+    <button id="clearBtn" disabled>🗑 清除全部</button>
+    <span class="sep"></span>
+    <button id="exportBtn" class="primary" disabled>⬇ 导出 PNG</button>
+    <button id="copyBtn" disabled>📋 复制到剪贴板</button>
+    <input type="file" id="fileInput" accept="image/*" hidden />
+  </div>
+</header>
+
+<main>
+  <div id="stage">
+    <div id="placeholder">
+      <strong>拖拽图片到此处</strong><br />
+      或点击选择文件 / 直接粘贴截图（Ctrl+V）<br />
+      加载后在图片上按住拖拽即可框选黑色遮挡块
+    </div>
+    <canvas id="canvas"></canvas>
+  </div>
+  <aside>
+    <h2>遮挡块（<span id="rectCount">0</span> 个）</h2>
+    <ul id="rectList"><li class="empty">暂无遮挡块</li></ul>
+    <div class="tips">
+      <b>拖拽空白处</b>：新建遮挡块<br />
+      <b>拖拽已有黑块</b>：移动位置<br />
+      <b>Esc</b>：取消正在画的框<br />
+      <b>Delete</b>：删除选中的块<br />
+      <b>Ctrl+Z</b>：撤销上一个块<br />
+      导出为原图分辨率的 PNG
+    </div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const stage = document.getElementById("stage");
+  const fileInput = document.getElementById("fileInput");
+  const placeholder = document.getElementById("placeholder");
+  const rectList = document.getElementById("rectList");
+  const rectCount = document.getElementById("rectCount");
+  const imgName = document.getElementById("imgName");
+  const loadBtn = document.getElementById("loadBtn");
+  const undoBtn = document.getElementById("undoBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const exportBtn = document.getElementById("exportBtn");
+  const copyBtn = document.getElementById("copyBtn");
+
+  let img = null;            // HTMLImageElement
+  let fileName = "image";    // 导出文件名（不含扩展名）
+  let rects = [];            // {x, y, w, h} —— 原图像素坐标
+  let selected = -1;         // 当前选中的遮挡块下标
+  let mode = null;           // {type:"draw", x0,y0,x1,y1}（CSS 像素）或 {type:"move", idx, dx, dy}
+  const view = { scale: 1, dpr: 1 };
+
+  // ------------------------------------------------------------- 加载图片
+  function onFile(file) {
+    if (!file || !file.type || !file.type.startsWith("image/")) {
+      alert("请选择图片文件");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => {
+      URL.revokeObjectURL(url);
+      img = im;
+      fileName = (file.name || "image").replace(/\.[^.]+$/, "") || "image";
+      imgName.textContent = file.name + "（" + im.naturalWidth + "×" + im.naturalHeight + "）";
+      rects = [];
+      selected = -1;
+      mode = null;
+      fit();
+      render();
+      updateList();
+      placeholder.style.display = "none";
+      canvas.style.display = "block";
+    };
+    im.onerror = () => {
+      URL.revokeObjectURL(url);
+      alert("图片加载失败，请换一个文件试试");
+    };
+    im.src = url;
+  }
+
+  // ------------------------------------------------------------- 画布适配
+  function fit() {
+    if (!img) return;
+    const maxW = Math.max(stage.clientWidth - 48, 100);
+    const maxH = Math.max(window.innerHeight - 130, 200);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    view.scale = Math.min(maxW / w, maxH / h);
+    view.dpr = window.devicePixelRatio || 1;
+    canvas.style.width = Math.max(1, Math.round(w * view.scale)) + "px";
+    canvas.style.height = Math.max(1, Math.round(h * view.scale)) + "px";
+    canvas.width = Math.max(1, Math.round(w * view.scale * view.dpr));
+    canvas.height = Math.max(1, Math.round(h * view.scale * view.dpr));
+  }
+
+  // ------------------------------------------------------------- 渲染
+  function render() {
+    if (!img) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const k = canvas.width / img.naturalWidth;   // 原图像素 → 画布像素
+    ctx.fillStyle = "#000";
+    for (const r of rects) ctx.fillRect(r.x * k, r.y * k, r.w * k, r.h * k);
+
+    if (selected >= 0 && rects[selected]) {
+      const r = rects[selected];
+      ctx.strokeStyle = "#4da3ff";
+      ctx.lineWidth = 1.5 * view.dpr;
+      ctx.setLineDash([6 * view.dpr, 4 * view.dpr]);
+      ctx.strokeRect(r.x * k, r.y * k, r.w * k, r.h * k);
+      ctx.setLineDash([]);
+    }
+
+    if (mode && mode.type === "draw") {
+      const x = Math.min(mode.x0, mode.x1) * view.dpr;
+      const y = Math.min(mode.y0, mode.y1) * view.dpr;
+      const w = Math.abs(mode.x1 - mode.x0) * view.dpr;
+      const h = Math.abs(mode.y1 - mode.y0) * view.dpr;
+      ctx.fillStyle = "rgba(0,0,0,.5)";
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = "#4da3ff";
+      ctx.lineWidth = 1.5 * view.dpr;
+      ctx.strokeRect(x, y, w, h);
+    }
+  }
+
+  // ------------------------------------------------------------- 坐标换算
+  function cssPos(e) {
+    const b = canvas.getBoundingClientRect();
+    return { x: e.clientX - b.left, y: e.clientY - b.top };
+  }
+  const toOrig = (css) => css / view.scale;   // CSS 像素 → 原图像素
+
+  // ------------------------------------------------------------- 交互
+  canvas.addEventListener("pointerdown", (e) => {
+    if (!img) return;
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    const p = cssPos(e);
+    const ox = toOrig(p.x), oy = toOrig(p.y);
+    for (let i = rects.length - 1; i >= 0; i--) {   // 命中最上层的块 → 移动模式
+      const r = rects[i];
+      if (ox >= r.x && ox <= r.x + r.w && oy >= r.y && oy <= r.y + r.h) {
+        mode = { type: "move", idx: i, dx: ox - r.x, dy: oy - r.y };
+        selected = i;
+        canvas.style.cursor = "move";
+        updateList();
+        return;
+      }
+    }
+    mode = { type: "draw", x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!img) return;
+    if (!mode) {   // 悬停时切换光标
+      const p = cssPos(e);
+      const ox = toOrig(p.x), oy = toOrig(p.y);
+      const hit = rects.some((r) => ox >= r.x && ox <= r.x + r.w && oy >= r.y && oy <= r.y + r.h);
+      canvas.style.cursor = hit ? "move" : "crosshair";
+      return;
+    }
+    const p = cssPos(e);
+    if (mode.type === "draw") {
+      mode.x1 = p.x;
+      mode.y1 = p.y;
+    } else {
+      const r = rects[mode.idx];
+      let nx = toOrig(p.x) - mode.dx;
+      let ny = toOrig(p.y) - mode.dy;
+      nx = Math.max(0, Math.min(nx, img.naturalWidth - r.w));
+      ny = Math.max(0, Math.min(ny, img.naturalHeight - r.h));
+      r.x = nx;
+      r.y = ny;
+    }
+    render();
+  });
+
+  function endMode() {
+    if (!mode) return;
+    if (mode.type === "draw") {
+      const w = Math.abs(mode.x1 - mode.x0);
+      const h = Math.abs(mode.y1 - mode.y0);
+      if (w > 3 && h > 3) {
+        rects.push({
+          x: toOrig(Math.min(mode.x0, mode.x1)),
+          y: toOrig(Math.min(mode.y0, mode.y1)),
+          w: toOrig(w),
+          h: toOrig(h),
+        });
+        selected = rects.length - 1;
+      }
+    }
+    mode = null;
+    canvas.style.cursor = "crosshair";
+    render();
+    updateList();
+  }
+  canvas.addEventListener("pointerup", endMode);
+  canvas.addEventListener("pointercancel", endMode);
+
+  // ------------------------------------------------------------- 列表
+  function updateList() {
+    rectCount.textContent = rects.length;
+    rectList.innerHTML = "";
+    if (!rects.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "暂无遮挡块";
+      rectList.appendChild(li);
+    }
+    rects.forEach((r, i) => {
+      const li = document.createElement("li");
+      if (i === selected) li.classList.add("sel");
+      const idx = document.createElement("span");
+      idx.className = "idx";
+      idx.textContent = "#" + (i + 1);
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = Math.round(r.w) + "×" + Math.round(r.h)
+        + " @ (" + Math.round(r.x) + ", " + Math.round(r.y) + ")";
+      const del = document.createElement("button");
+      del.className = "del";
+      del.textContent = "×";
+      del.title = "删除该遮挡块";
+      del.onclick = (e) => { e.stopPropagation(); removeRect(i); };
+      li.onclick = () => { selected = i; render(); updateList(); };
+      li.append(idx, meta, del);
+      rectList.appendChild(li);
+    });
+    undoBtn.disabled = !rects.length;
+    clearBtn.disabled = !rects.length;
+    exportBtn.disabled = !img;
+    copyBtn.disabled = !img;
+  }
+
+  function removeRect(i) {
+    rects.splice(i, 1);
+    if (selected === i) selected = -1;
+    else if (selected > i) selected--;
+    render();
+    updateList();
+  }
+
+  function undo() {
+    if (!rects.length) return;
+    rects.pop();
+    if (selected >= rects.length) selected = rects.length - 1;
+    render();
+    updateList();
+  }
+
+  // ------------------------------------------------------------- 导出
+  function buildExport() {
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const cx = c.getContext("2d");
+    cx.drawImage(img, 0, 0);
+    cx.fillStyle = "#000";
+    for (const r of rects) {
+      cx.fillRect(Math.round(r.x), Math.round(r.y), Math.round(r.w), Math.round(r.h));
+    }
+    return c;
+  }
+
+  function exportPNG() {
+    if (!img) return;
+    buildExport().toBlob((blob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName + "_已打码.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }, "image/png");
+  }
+
+  function flash(btn, text) {
+    const old = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  }
+
+  function copyToClipboard() {
+    if (!img) return;
+    buildExport().toBlob(async (blob) => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        flash(copyBtn, "✓ 已复制");
+      } catch (err) {
+        alert("复制失败：" + err.message + "\n（部分浏览器不支持剪贴板写入图片，请用导出按钮下载）");
+      }
+    }, "image/png");
+  }
+
+  // ------------------------------------------------------------- 事件绑定
+  loadBtn.onclick = () => fileInput.click();
+  placeholder.onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    if (fileInput.files[0]) onFile(fileInput.files[0]);
+    fileInput.value = "";
+  };
+  undoBtn.onclick = undo;
+  clearBtn.onclick = () => {
+    if (!rects.length) return;
+    if (confirm("确定清除全部 " + rects.length + " 个遮挡块？")) {
+      rects = [];
+      selected = -1;
+      render();
+      updateList();
+    }
+  };
+  exportBtn.onclick = exportPNG;
+  copyBtn.onclick = copyToClipboard;
+
+  // 拖拽 / 粘贴加载
+  ["dragover", "drop"].forEach((ev) =>
+    document.body.addEventListener(ev, (e) => e.preventDefault()));
+  document.body.addEventListener("drop", (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files[0];
+    if (f) onFile(f);
+  });
+  document.addEventListener("paste", (e) => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const it of items) {
+      if (it.type && it.type.startsWith("image/")) {
+        onFile(it.getAsFile());
+        break;
+      }
+    }
+  });
+
+  // 键盘
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      mode = null;
+      render();
+    } else if ((e.key === "Delete" || e.key === "Backspace") && selected >= 0 && !e.ctrlKey && !e.metaKey) {
+      removeRect(selected);
+    } else if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+    }
+  });
+
+  window.addEventListener("resize", () => { fit(); render(); });
+})();
+</script>
+</body>
+</html>

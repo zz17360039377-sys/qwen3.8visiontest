@@ -1,0 +1,10 @@
+{
+  "dataset": "detect_rm2025_armor",
+  "type": "detect",
+  "n": 30,
+  "wall_s": 92.85272932052612,
+  "img_per_min": 19.38553678682324,
+  "workers": 3,
+  "gpu_mem_max_mb": 20537,
+  "prompt": "You are a precise YOLO annotation engine. Silently locate EVERY object instance in the image.\nClasses (id=name): 0=c0, 1=c1, 2=c2.\nThen output ONLY YOLO lines, one per object: class_id cx cy w h\n- class_id is the integer id listed above\n- cx cy w h are floats in [0,1] normalized by image width/height, 4+ decimals\n- one TIGHT box per object, objects are typically 2-40% of image width; never output a whole-image box\nExample output:\n0 0.6465 0.7551 0.1868 0.1592\n2 0.1877 0.7654 0.1008 0.1628\nIf there are no objects output exactly: NONE"
+}

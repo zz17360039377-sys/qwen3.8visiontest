@@ -1,0 +1,41 @@
+# selflabel config (example / template).
+#
+# Everything here is PER-TASK -- edit it to match whatever you are labelling.
+#   * The number of classes and their names are yours to choose.
+#   * For pose, the number of keypoints N is just the length of the `keypoints`
+#     list -- also yours to choose.
+#   * Each class name and each keypoint name is paired with a `description`:
+#     that description is what is fed to the model so it knows what to look for.
+#
+# Use with:  python3 selflabel.py --mode pose --config config.example.yaml ...
+
+# --- detect classes (used by --mode detect) -------------------------------
+# id == list index. `name` goes into classes.txt; `description` goes into the
+# prompt.
+classes:
+  - name: "red_armor"
+    description: "A small bright-red armor/target module, roughly rectangular, high saturation."
+  - name: "blue_armor"
+    description: "A small blue armor/target module, roughly rectangular, clearly distinct from red."
+
+# --- pose keypoints (used by --mode pose; N = length of this list) --------
+# Order matters: the i-th entry is keypoint i in the YOLO output.
+# Each entry needs its own distinct `description` so the model places the point
+# at that feature instead of collapsing onto the box corners.
+keypoints:
+  - name: "top_left"
+    description: "The top-left corner of the armor module."
+  - name: "top_right"
+    description: "The top-right corner of the armor module."
+  - name: "bottom_right"
+    description: "The bottom-right corner of the armor module."
+  - name: "bottom_left"
+    description: "The bottom-left corner of the armor module."
+
+# --- skeleton edges for pose overlay (pairs of keypoint indices) ----------
+# Optional. Used only to draw connecting lines in the preview image.
+skeleton:
+  - [0, 1]
+  - [1, 2]
+  - [2, 3]
+  - [3, 0]
